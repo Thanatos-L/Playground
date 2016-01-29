@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="9531" systemVersion="15A284" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="BYZ-38-t0r">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9529"/>
+    </dependencies>
+    <scenes>
+        <!--Root Page-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController id="BYZ-38-t0r" customClass="rootPage" customModule="tutorialScreen" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="244" y="340"/>
+        </scene>
+        <!--Tutorial Page-->
+        <scene sceneID="dQf-Gi-B0b">
+            <objects>
+                <viewController storyboardIdentifier="PageContentViewController" id="dYk-nM-09a" customClass="tutorialPage" customModule="tutorialScreen" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="fP4-YN-nSi"/>
+                        <viewControllerLayoutGuide type="bottom" id="OAU-nq-g3E"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="RTS-vu-ip1">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="W65-cP-mef">
+                                <rect key="frame" x="0.0" y="0.0" width="240" height="128"/>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="RdM-8u-ft5">
+                                <rect key="frame" x="-42" y="-21" width="42" height="21"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="127" id="5ko-f0-FiR"/>
+                                    <constraint firstAttribute="height" constant="21" id="l9V-Ba-Oat"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
+                                <nil key="highlightedColor"/>
+                                <variation key="default">
+                                    <mask key="constraints">
+                                        <exclude reference="5ko-f0-FiR"/>
+                                        <exclude reference="l9V-Ba-Oat"/>
+                                    </mask>
+                                </variation>
+                                <variation key="widthClass=compact">
+                                    <mask key="constraints">
+                                        <include reference="5ko-f0-FiR"/>
+                                        <include reference="l9V-Ba-Oat"/>
+                                    </mask>
+                                </variation>
+                            </label>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstItem="RdM-8u-ft5" firstAttribute="top" secondItem="W65-cP-mef" secondAttribute="bottom" constant="76" id="0TF-uK-R8h"/>
+                            <constraint firstItem="W65-cP-mef" firstAttribute="leading" secondItem="RTS-vu-ip1" secondAttribute="leading" id="KYo-mI-WaT"/>
+                            <constraint firstItem="W65-cP-mef" firstAttribute="centerX" secondItem="RdM-8u-ft5" secondAttribute="centerX" id="Rhk-Ov-rTV"/>
+                            <constraint firstItem="W65-cP-mef" firstAttribute="top" secondItem="RTS-vu-ip1" secondAttribute="top" id="VjN-WR-mNM"/>
+                            <constraint firstAttribute="trailing" secondItem="W65-cP-mef" secondAttribute="trailing" id="bFm-9k-5im"/>
+                            <constraint firstItem="OAU-nq-g3E" firstAttribute="top" secondItem="RdM-8u-ft5" secondAttribute="bottom" constant="228" id="yfv-Ub-8NA"/>
+                        </constraints>
+                        <variation key="default">
+                            <mask key="subviews">
+                                <exclude reference="W65-cP-mef"/>
+                                <exclude reference="RdM-8u-ft5"/>
+                            </mask>
+                            <mask key="constraints">
+                                <exclude reference="KYo-mI-WaT"/>
+                                <exclude reference="Rhk-Ov-rTV"/>
+                                <exclude reference="VjN-WR-mNM"/>
+                                <exclude reference="bFm-9k-5im"/>
+                                <exclude reference="0TF-uK-R8h"/>
+                                <exclude reference="yfv-Ub-8NA"/>
+                            </mask>
+                        </variation>
+                        <variation key="widthClass=compact">
+                            <mask key="subviews">
+                                <include reference="W65-cP-mef"/>
+                                <include reference="RdM-8u-ft5"/>
+                            </mask>
+                            <mask key="constraints">
+                                <include reference="KYo-mI-WaT"/>
+                                <include reference="Rhk-Ov-rTV"/>
+                                <include reference="VjN-WR-mNM"/>
+                                <include reference="bFm-9k-5im"/>
+                                <include reference="0TF-uK-R8h"/>
+                                <include reference="yfv-Ub-8NA"/>
+                            </mask>
+                        </variation>
+                    </view>
+                    <connections>
+                        <outlet property="image" destination="W65-cP-mef" id="eeg-1X-MFi"/>
+                        <outlet property="label" destination="RdM-8u-ft5" id="uvW-rh-dhF"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="6e9-xL-m22" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="915" y="340"/>
+        </scene>
+        <!--Page View Controller-->
+        <scene sceneID="tpf-iY-aIP">
+            <objects>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="7be-ru-e2s" userLabel="First Responder" sceneMemberID="firstResponder"/>
+                <pageViewController storyboardIdentifier="PageViewController" autoresizesArchivedViewToFullSize="NO" transitionStyle="scroll" navigationOrientation="horizontal" spineLocation="none" id="zhf-xx-vmg" sceneMemberID="viewController"/>
+            </objects>
+            <point key="canvasLocation" x="243" y="1042"/>
+        </scene>
+    </scenes>
+</document>
