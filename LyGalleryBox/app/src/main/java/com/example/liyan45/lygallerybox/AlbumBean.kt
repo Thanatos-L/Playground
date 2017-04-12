@@ -75,7 +75,7 @@ class AlbumBean {
                             // 根据父路径名将图片放入到相册的HashMap中
                             if (albumMap.containsKey(parentFolder)) { // 相册已经被纪录
                                 val album = albumMap.get(parentFolder);
-                                album?.imageCounts?.plus(1)
+                                album?.imageCounts = album?.imageCounts?.plus(1)
                             } else {
                                 val albumFolder = File(parentFolder)
                                 if (! albumFolder.exists())

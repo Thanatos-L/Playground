@@ -26,9 +26,6 @@ abstract class AlbumMultiTask<Params, Progress, Result> : AsyncTask<Params, Prog
             }
         }
 
-
-
-
         fun initThreadPool() {
             mTHREAD_POOL_EXECUTOR = ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE,
                     TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory)
