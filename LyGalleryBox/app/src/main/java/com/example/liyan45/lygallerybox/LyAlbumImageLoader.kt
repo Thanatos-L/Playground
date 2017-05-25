@@ -7,11 +7,12 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.text.TextUtils
 import android.util.Log
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.Switch
-import java.io.File
-import java.io.IOException
+import java.io.*
 import java.lang.ref.SoftReference
+import java.net.URI
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,11 +20,17 @@ import java.util.concurrent.ConcurrentHashMap
  * Created by liyan45 on 17/4/11.
  */
 class LyAlbumImageLoader(context: Context) {
+
     val mContext : Context = context
+    // LRU cache for images
     var imageCache : HashMap<String, SoftReference<Bitmap>>  = HashMap<String, SoftReference<Bitmap>>()
+    // 把url绑定在imageView上，用来防止显示缓存错误
     var currentUrls : ConcurrentHashMap<ImageView, String> = ConcurrentHashMap<ImageView, String>()
+
     var defBitmap : Bitmap ? = null
+
     val PLACE_HOLDER : Int = R.drawable.qraved_bg_default
+
     var usePlaceHolder = false
 
     init {
@@ -105,6 +112,24 @@ class LyAlbumImageLoader(context: Context) {
                 }
             } else {
                 return true
+            }
+            Log.i("lyab", "准备存储缩略图")
+            var out : OutputStream? = null
+            try {
+                out = FileOutputStream(file)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                return true
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+                return false
+            } finally {
+                if (out != null) {
+                    try {
+                        out.close()
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
+                }
             }
 
         }
@@ -235,7 +260,7 @@ class LyAlbumImageLoader(context: Context) {
                 val targetUrl = currentUrls.get(imageView)
                 if (uri != targetUrl) {
                     Log.i("lyab", "图片已经过时了")
-                    return null
+                    return
                 }
                 if (options == null) {
                     return
@@ -259,8 +284,68 @@ class LyAlbumImageLoader(context: Context) {
                       imageCallback: ImageCallback) {
         if (resizeImageView && imageViewWidth > 0) { // 如果给出imageViewWith，就改变传入的iamgeview
             var imageViewHeight : Int
-
+            val degree = readPictureDegree(uri)
+            if (autoRotate && (degree == 90 || degree == 270)) { // 如果原来是竖着的，且需要自动摆正那么宽高互换
+                imageViewHeight = cacheOptions.outWidth * imageViewWidth / cacheOptions.outHeight
+            } else {
+                imageViewHeight = cacheOptions.outHeight * imageViewWidth / cacheOptions.outWidth
+            }
+            Log.i("lyab", "准备重设高度 " + imageViewHeight)
+            val params = imageView.layoutParams
+            if (params != null) {
+                params.height = imageViewHeight
+                imageView.layoutParams = params
+            }
         }
+
+        object : AlbumMultiTask<Void, Void, Bitmap>() {
+            override fun doInBackground(vararg params: Void?): Bitmap? {
+                val targetUrl = currentUrls.get(imageView)
+                if (targetUrl != uri) {
+                    Log.i("lyab", "图片已经过时")
+                    return null
+                }
+                var bitmap: Bitmap? = null
+                bitmap = getBitmapFromFile(uri, cacheOptions)
+                if (autoRotate && bitmap != null) {
+                    val degree = readPictureDegree(uri)
+                    if (degree != 0) {
+                        bitmap = rotateBitmap(bitmap, degree, true)
+                    }
+                }
+                if (bitmap == null) {
+                    bitmap = BitmapFactory.decodeResource(mContext.resources, R.drawable.qraved_bg_default);
+                }
+                return bitmap
+            }
+
+            override fun onPostExecute(bitmap: Bitmap?) {
+                super.onPostExecute(bitmap)
+                val targetUrl = currentUrls.get(imageView)
+                if (targetUrl != uri) {
+                    Log.i("lyab", "图片已经过时")
+                    return
+                }
+                if (bitmap == null) {
+                    return
+                }
+                imageCallback.imageLoaded(bitmap, imageView, uri)
+                val context = imageView.context
+                if (!storeThumbnail) {
+                    return
+                }
+                object : AlbumMultiTask<Void,Void,Void>() {
+                    override fun doInBackground(vararg params: Void?): Void? {
+                        if (!imageCache.containsKey(uri)) {
+                            // 将bitmap保存到LRU缓存中
+                            imageCache.put(uri, SoftReference<Bitmap>(bitmap))
+                        }
+                        storeThumbnail(context, File(uri).name, bitmap)
+                        return null
+                    }
+                }.executeDependSDK()
+            }
+        }.executeDependSDK()
     }
 
     fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
@@ -280,5 +365,34 @@ class LyAlbumImageLoader(context: Context) {
         return inSampleSize
     }
 
+    fun setAsyncBitmapFromSD(uri: String, imageView: ImageView, imageViewWidth: Int, resizeImageView: Boolean,
+                             autoRotate: Boolean, storeThumbnail: Boolean) {
+        if (uri != null) {
+            // 把url绑定在imageView上，用来防止显示缓存错误
+            currentUrls.put(imageView, uri)
+        } else {
+            currentUrls.put(imageView, "")
+        }
+        // 清空上次的图片
+        imageView.setImageDrawable(null)
+        val cacheBitmap = loadBitmapFromSD(uri, imageView, imageViewWidth, resizeImageView, autoRotate, storeThumbnail,
+
+                object : ImageCallback {
+                    override fun imageLoaded(imageBitmap: Bitmap, imageView: ImageView, imageUrl: String) {
+                        Log.i("lyab", "加载成功的bitmap宽高是 w " + imageBitmap.width + " h " + imageBitmap.height)
+                        imageView.post { imageView.setImageBitmap(imageBitmap) }
+                    }
+                })
+        if (cacheBitmap != null) {
+            imageView.setImageBitmap(cacheBitmap)
+            Log.i("lyab", "缓存的bitmap width " + cacheBitmap.width + " height " + cacheBitmap.height)
+            val params = imageView.layoutParams
+            if (resizeImageView && params != null && imageViewWidth > 0 && cacheBitmap != defBitmap) {
+
+            }
+        }
+
+
+    }
 
 }
