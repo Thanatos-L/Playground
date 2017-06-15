@@ -1,0 +1,710 @@
+//
+//  ViewController.swift
+//  LyEditImageView
+//
+//  Created by Li,Yan(MMS) on 2017/6/10.
+//  Copyright © 2017年 Li,Yan(MMS). All rights reserved.
+
+//<div>Icons made by <a href="http://www.flaticon.com/authors/icon-monk" title="Icon Monk">Icon Monk</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div>
+
+import UIKit
+import AVFoundation
+
+
+class LyEditImageView: UIView, UIGestureRecognizerDelegate {
+    let CROP_VIEW_TAG = 1001
+    let IMAGE_VIEW_TAG = 1002
+    static let LEFT_UP_TAG = 1101
+    static let LEFT_DOWN_TAG = 1102
+    static let RIGHT_UP_TAG = 1103
+    static let RIGHT_DOWN_TAG = 1104
+    static let LEFT_LINE_TAG = 1105
+    static let UP_LINE_TAG = 1106
+    static let RIGHT_LINE_TAG = 1107
+    static let DOWN_LINE_TAG = 1108
+    
+    let INIT_CROP_VIEW_SIZE = 100
+    let MINIMAL_CROP_VIEW_SIZE: CGFloat = 30.0
+    let MINIMUM_ZOOM_SCALE: CGFloat = 1.0
+    let MAXIMUM_ZOOM_SCALE: CGFloat = 8.0
+    
+    let screenHeight = UIScreen.main.bounds.size.height
+    let screenWidth = UIScreen.main.bounds.size.width
+    
+    var pinchGestureRecognizer: UIPinchGestureRecognizer!
+    var panGestureRecognizer: UIPanGestureRecognizer!
+    var cropViewPanGesture: UIPanGestureRecognizer!
+    
+    var imageView: UIImageView!
+    var touchStartPoint: CGPoint!
+    var originImageViewFrame: CGRect!
+    var imageZoomScale: CGFloat!
+    fileprivate var cropView: CropView!
+    fileprivate var overLayView: OverLayView!
+    
+    var cropUpContraint: NSLayoutConstraint!
+    var originalImageViewFrame: CGRect!
+    
+    var cropLeftMargin: CGFloat!
+    var cropTopMargin: CGFloat!
+    var cropRightMargin: CGFloat!
+    var cropBottomMargin: CGFloat!
+    var cropViewConstraints = [NSLayoutConstraint]()
+    var cropLeftToImage: CGFloat!
+    var cropTopToImage: CGFloat!
+    var cropRightToImage: CGFloat!
+    var cropBottomToImage: CGFloat!
+    var originalSubViewFrame:CGRect!
+    var cropViewConstraintsRatio: CGFloat!
+    // MARK: init
+    private func commitInit() {
+        // set cropView
+        initCropView()
+        // set gesture
+        initGestureRecognizer()
+        
+        initButton()
+        
+        self.isMultipleTouchEnabled = true
+    }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func initWithImage(image: UIImage) {
+        imageView = UIImageView()
+        imageView.tag = IMAGE_VIEW_TAG;
+        self.addSubview(self.imageView)
+        imageView.isUserInteractionEnabled = true;
+        
+        imageView.image = image
+        imageView.frame = CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height);
+        let frame = AVMakeRect(aspectRatio: imageView.frame.size, insideRect: self.frame);
+        imageView.frame = frame
+        originImageViewFrame = frame
+        NSLog("initWithImage %@", NSStringFromCGRect(originImageViewFrame))
+        imageZoomScale = 1.0
+        commitInit()
+    }
+    
+    private func initGestureRecognizer() {
+
+        panGestureRecognizer = UIPanGestureRecognizer()
+        panGestureRecognizer.addTarget(self, action: #selector(handlePanGesture(sender:)))
+        imageView.addGestureRecognizer(panGestureRecognizer)
+        
+        cropViewPanGesture = UIPanGestureRecognizer()
+        cropViewPanGesture.addTarget(self, action: #selector(handlePanGesture(sender:)))
+        cropView.addGestureRecognizer(cropViewPanGesture)
+        
+        pinchGestureRecognizer = UIPinchGestureRecognizer()
+        pinchGestureRecognizer.addTarget(self, action: #selector(handlePinchGesture(sender:)))
+        self.addGestureRecognizer(pinchGestureRecognizer)
+    }
+    
+    private func initImageView() {
+       
+    }
+
+    private func initCropView() {
+        initOverLayView()
+        
+        cropView = CropView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
+        cropView.tag = CROP_VIEW_TAG;
+        cropView.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(cropView)
+
+        cropRightMargin = (CGFloat)(originImageViewFrame.size.width / 2) - (CGFloat)(INIT_CROP_VIEW_SIZE / 2)
+        cropLeftMargin = cropRightMargin
+        cropTopMargin = (CGFloat)(originImageViewFrame.size.height / 2) - (CGFloat)(INIT_CROP_VIEW_SIZE / 2) + (CGFloat)((screenHeight - originImageViewFrame.size.height) / 2)
+        cropBottomMargin = cropTopMargin
+        
+        let views = ["cropView":cropView!, "imageView":imageView!] as [String : UIView]
+        let Hvfl = String(format: "H:|-%f-[cropView]-%f-|", cropLeftMargin, cropRightMargin);
+        let Vvfl = String(format: "V:|-%f-[cropView]-%f-|", cropTopMargin, cropBottomMargin)
+        let cropViewHorizentalConstraints = NSLayoutConstraint.constraints(withVisualFormat: Hvfl, options: [], metrics: nil, views: views)
+        let cropViewVerticalConstraints = NSLayoutConstraint.constraints(withVisualFormat: Vvfl, options: [], metrics: nil, views: views)
+        cropViewConstraints += cropViewHorizentalConstraints
+        cropViewConstraints += cropViewVerticalConstraints
+        self.addConstraints(cropViewVerticalConstraints)
+        self.addConstraints(cropViewHorizentalConstraints)
+        self.layoutIfNeeded()
+        
+        cropView.initCropViewSubViews()
+        adjustOverLayView()
+    }
+    
+    private func initOverLayView() {
+        overLayView = OverLayView(frame: self.frame)
+        self.addSubview(overLayView)
+    }
+    
+    private func initButton() {
+        let cropButton = UIButton()
+        cropButton.frame = CGRect(x: screenWidth / 4 - 25, y: screenHeight - 100, width: 50, height: 50)
+        cropButton.setImage(UIImage(named: "accept.png"), for: UIControlState.normal)
+        self.addSubview(cropButton)
+        
+        let rotateButton = UIButton()
+        rotateButton.frame = CGRect(x: (screenWidth / 4) * 3 - 25, y: screenHeight - 100, width: 50, height: 50)
+        rotateButton.setImage(UIImage(named: "rotate.png"), for: UIControlState.normal)
+        rotateButton.addTarget(self, action: #selector(rotateButtonAction), for: .touchUpInside)
+        self.addSubview(rotateButton)
+    }
+    
+    private func adjustOverLayView() {
+        overLayView.setOverLayView(cropRect: self.cropView.frame);
+        overLayView.setNeedsDisplay()
+    }
+    
+    // MARK: Handle Pinch Gesture
+    @objc fileprivate func handlePinchGesture(sender: UIPinchGestureRecognizer)  {
+        NSLog("pinch")
+        adjustAnchorPointForGesture(sender: sender)
+        if sender.state == UIGestureRecognizerState.began {
+            
+        } else if sender.state == UIGestureRecognizerState.changed {
+            imageZoomScale = imageView.frame.size.height / originImageViewFrame.size.height
+            if imageZoomScale > 0.5 {
+                imageView.transform = imageView.transform.scaledBy(x: sender.scale, y: sender.scale)
+                sender.scale = 1
+            }
+            var layoutCropView = false
+            if imageView.frame.origin.y > cropTopMargin {
+                cropTopMargin = imageView.frame.origin.y
+                layoutCropView = true
+            }
+            if imageView.frame.origin.x > cropLeftMargin {
+                cropLeftMargin = imageView.frame.origin.x
+                layoutCropView = true
+            }
+            if screenHeight - (imageView.frame.origin.y + imageView.frame.size.height) > cropBottomMargin {
+                 cropBottomMargin = screenHeight - (imageView.frame.origin.y + imageView.frame.size.height)
+                layoutCropView = true
+            }
+            if screenWidth - (imageView.frame.origin.x + imageView.frame.size.width) > cropRightMargin {
+                 cropRightMargin = screenWidth - (imageView.frame.origin.x + imageView.frame.size.width)
+                layoutCropView = true
+            }
+            if layoutCropView {
+                updateCropViewLayout()
+                adjustOverLayView()
+            }
+        } else if sender.state == UIGestureRecognizerState.ended
+            || sender.state == UIGestureRecognizerState.cancelled {
+            
+            animationAfterZoom(zoomScale: imageZoomScale)
+        }
+    }
+    
+    private func adjustAnchorPointForGesture(sender: UIGestureRecognizer) {
+        if sender.state == UIGestureRecognizerState.began {
+            let piceView = imageView
+            let locationInView = sender.location(in: piceView)
+            let locationInSuperView = sender.location(in: piceView?.superview)
+            piceView?.layer.anchorPoint = CGPoint(x: locationInView.x / piceView!.bounds.size.width, y: locationInView.y / piceView!.bounds.size.height)
+            piceView?.center = locationInSuperView
+        }
+    }
+    
+    private func animationAfterZoom(zoomScale: CGFloat) {
+        
+        
+        if zoomScale <= MINIMUM_ZOOM_SCALE {
+            UIView.animate(withDuration: 0.5, animations: { [unowned self] in
+                self.imageView.transform = self.imageView.transform.scaledBy(x: self.MINIMUM_ZOOM_SCALE / self.imageZoomScale, y: self.MINIMUM_ZOOM_SCALE / self.imageZoomScale);
+                self.imageView.frame = self.originImageViewFrame
+            })
+            imageZoomScale = MINIMUM_ZOOM_SCALE
+        }
+        
+        if zoomScale >= MAXIMUM_ZOOM_SCALE {
+            UIView.animate(withDuration: 0.5, animations: { [unowned self] in
+                self.imageView.transform = self.imageView.transform.scaledBy(x: self.MAXIMUM_ZOOM_SCALE / self.imageZoomScale, y: self.MAXIMUM_ZOOM_SCALE / self.imageZoomScale)
+            })
+            imageZoomScale = MAXIMUM_ZOOM_SCALE
+        }
+    }
+    
+    // MARK: Handle CropView Pan Gesture
+    @objc fileprivate func handlePanGesture(sender: UIPanGestureRecognizer) {
+        let piceView = sender.view
+        if sender.state == UIGestureRecognizerState.began {
+            NSLog("gesture on view %d",cropView.getCropViewTag())
+        }
+        if sender.state == UIGestureRecognizerState.changed {
+            if piceView?.tag == CROP_VIEW_TAG {
+                handleCropViewPanGesture(sender: sender)
+            } else if piceView?.tag == IMAGE_VIEW_TAG {
+                panImageView(sender: sender)
+            }
+        }
+        if sender.state == UIGestureRecognizerState.ended
+            || sender.state == UIGestureRecognizerState.cancelled {
+        }
+    }
+    
+    // Check crop view's size incase it too small
+    // Ensure crop view will not be moved out of the image view
+    func handleCropViewPanGesture(sender: UIPanGestureRecognizer) {
+        let tag:Int = cropView.getCropViewTag()
+        let view = sender.view
+        var translation = sender.translation(in: view?.superview)
+        switch tag {
+        case LyEditImageView.LEFT_UP_TAG:
+            if translation.x + cropLeftMargin < imageView.frame.origin.x {
+                translation.x = imageView.frame.origin.x - cropLeftMargin
+            }
+            if translation.y + cropTopMargin < imageView.frame.origin.y {
+                translation.y = imageView.frame.origin.y - cropTopMargin
+            }
+            if screenWidth - (cropLeftMargin + translation.x  + cropRightMargin) < MINIMAL_CROP_VIEW_SIZE {
+                translation.x = screenWidth - (cropLeftMargin + cropRightMargin) - MINIMAL_CROP_VIEW_SIZE;
+            }
+            if screenHeight - (cropTopMargin + translation.y + cropBottomMargin) < MINIMAL_CROP_VIEW_SIZE {
+                translation.y = screenHeight - (cropTopMargin + cropBottomMargin) - MINIMAL_CROP_VIEW_SIZE;
+            }
+            cropTopMargin! += translation.y
+            cropLeftMargin! += translation.x
+            break
+        case LyEditImageView.LEFT_DOWN_TAG:
+            if translation.x + cropLeftMargin < imageView.frame.origin.x {
+                translation.x = imageView.frame.origin.x - cropLeftMargin
+            }
+            if cropBottomMargin - translation.y < screenHeight - (imageView.frame.origin.y + imageView.frame.size.height) {
+                translation.y = cropBottomMargin - (screenHeight - (imageView.frame.origin.y + imageView.frame.size.height))
+            }
+            if screenWidth - (cropLeftMargin + translation.x + cropRightMargin) < MINIMAL_CROP_VIEW_SIZE {
+                translation.x = screenWidth - (cropLeftMargin + cropRightMargin) - MINIMAL_CROP_VIEW_SIZE;
+            }
+            if screenHeight - (cropTopMargin + cropBottomMargin - translation.y) < MINIMAL_CROP_VIEW_SIZE {
+                translation.y = MINIMAL_CROP_VIEW_SIZE - (screenHeight - (cropTopMargin + cropBottomMargin))
+            }
+            cropLeftMargin! += translation.x
+            cropBottomMargin! -= translation.y
+            break
+        case LyEditImageView.RIGHT_UP_TAG:
+            if cropRightMargin - translation.x < screenWidth - (imageView.frame.origin.x + imageView.frame.size.width) {
+                translation.x = cropRightMargin - (screenWidth - (imageView.frame.origin.x + imageView.frame.size.width))
+            }
+            if translation.y + cropTopMargin < imageView.frame.origin.y {
+                translation.y = imageView.frame.origin.y - cropTopMargin
+            }
+            if screenWidth - (cropLeftMargin + cropRightMargin - translation.x) < MINIMAL_CROP_VIEW_SIZE {
+                translation.x = MINIMAL_CROP_VIEW_SIZE - (screenWidth - (cropLeftMargin + cropRightMargin))
+            }
+            if screenHeight - (cropTopMargin + translation.y + cropBottomMargin) < MINIMAL_CROP_VIEW_SIZE {
+                translation.y = screenHeight - (cropTopMargin + cropBottomMargin) - MINIMAL_CROP_VIEW_SIZE;
+            }
+            cropRightMargin! -= translation.x
+            cropTopMargin! += translation.y
+            
+            break
+        case LyEditImageView.RIGHT_DOWN_TAG:
+            if cropRightMargin - translation.x < screenWidth - (imageView.frame.origin.x + imageView.frame.size.width) {
+                translation.x = cropRightMargin - (screenWidth - (imageView.frame.origin.x + imageView.frame.size.width))
+            }
+            if cropBottomMargin - translation.y < screenHeight - (imageView.frame.origin.y + imageView.frame.size.height) {
+                translation.y = cropBottomMargin - (screenHeight - (imageView.frame.origin.y + imageView.frame.size.height))
+            }
+            if screenWidth - (cropLeftMargin + cropRightMargin - translation.x) < MINIMAL_CROP_VIEW_SIZE {
+                translation.x = MINIMAL_CROP_VIEW_SIZE - (screenWidth - (cropLeftMargin + cropRightMargin))
+            }
+            if screenHeight - (cropTopMargin + cropBottomMargin - translation.y) < MINIMAL_CROP_VIEW_SIZE {
+                translation.y = MINIMAL_CROP_VIEW_SIZE - (screenHeight - (cropTopMargin + cropBottomMargin))
+            }
+            cropRightMargin! -= translation.x
+            cropBottomMargin! -= translation.y
+            break
+        case LyEditImageView.LEFT_LINE_TAG:
+            if screenWidth - (cropLeftMargin + cropRightMargin + translation.x) < MINIMAL_CROP_VIEW_SIZE {
+                translation.x = screenWidth - (cropLeftMargin + cropRightMargin) - MINIMAL_CROP_VIEW_SIZE
+            }
+            if translation.x + cropLeftMargin < imageView.frame.origin.x {
+                translation.x = imageView.frame.origin.x - cropLeftMargin
+            }
+            cropLeftMargin! += translation.x
+            break
+        case LyEditImageView.UP_LINE_TAG:
+            if translation.y + cropTopMargin < imageView.frame.origin.y {
+                translation.y = imageView.frame.origin.y - cropTopMargin
+            }
+            if screenHeight - (cropTopMargin + translation.y + cropBottomMargin) < MINIMAL_CROP_VIEW_SIZE {
+                translation.y = screenHeight - (cropTopMargin + cropBottomMargin) - MINIMAL_CROP_VIEW_SIZE;
+            }
+            cropTopMargin! += translation.y
+            break
+        case LyEditImageView.RIGHT_LINE_TAG:
+            if cropRightMargin - translation.x < screenWidth - (imageView.frame.origin.x + imageView.frame.size.width) {
+                translation.x = cropRightMargin - (screenWidth - (imageView.frame.origin.x + imageView.frame.size.width))
+            }
+            if screenWidth - (cropLeftMargin + cropRightMargin - translation.x) < MINIMAL_CROP_VIEW_SIZE {
+                translation.x = MINIMAL_CROP_VIEW_SIZE - (screenWidth - (cropLeftMargin + cropRightMargin))
+            }
+            cropRightMargin! -= translation.x
+            break
+        case LyEditImageView.DOWN_LINE_TAG:
+            if cropBottomMargin - translation.y < screenHeight - (imageView.frame.origin.y + imageView.frame.size.height) {
+                translation.y = cropBottomMargin - (screenHeight - (imageView.frame.origin.y + imageView.frame.size.height))
+            }
+            if screenHeight - (cropTopMargin + cropBottomMargin - translation.y) < MINIMAL_CROP_VIEW_SIZE {
+                translation.y = MINIMAL_CROP_VIEW_SIZE - (screenHeight - (cropTopMargin + cropBottomMargin))
+            }
+            cropBottomMargin! -= translation.y
+            break
+        default:
+            panCropView(translation: translation)
+            break
+        }
+        
+        if cropLeftMargin <= 0 {
+            cropLeftMargin = 0;
+        }
+        if cropRightMargin < 0 {
+            cropRightMargin = 0;
+        }
+        if cropTopMargin < 0 {
+            cropTopMargin = 0;
+        }
+        if cropBottomMargin < 0 {
+            cropBottomMargin = 0;
+        }
+        
+        updateCropViewLayout()
+        // redraw overLayView after move cropView
+        adjustOverLayView()
+        sender.setTranslation(CGPoint.zero, in: view?.superview)
+    }
+    
+    private func panCropView( translation: CGPoint) {
+        var translation = translation
+
+        let right = cropRightMargin
+        let left = cropLeftMargin
+        let top = cropTopMargin
+        let bottom = cropBottomMargin
+        
+        if  left! + translation.x < imageView.frame.origin.x {
+            translation.x = imageView.frame.origin.x - left!
+        }
+        if right! - translation.x < screenWidth - (imageView.frame.origin.x + imageView.frame.size.width) {
+            translation.x = right! - (screenWidth - (imageView.frame.origin.x + imageView.frame.size.width))
+        }
+        if top! + translation.y < imageView.frame.origin.y {
+            translation.y = imageView.frame.origin.y - top!
+        }
+        if bottom! - translation.y < screenHeight - (imageView.frame.origin.y + imageView.frame.size.height) {
+            translation.y = bottom! - (screenHeight - (imageView.frame.origin.y + imageView.frame.size.height))
+        }
+        
+        cropRightMargin! -= translation.x
+        cropLeftMargin! += translation.x
+        cropBottomMargin! -= translation.y
+        cropTopMargin! += translation.y
+    }
+    
+    private func updateCropViewLayout() {
+        // change cropview's constraints
+        self.removeConstraints(cropViewConstraints)
+        let views = ["cropView":cropView!, "imageView":imageView!] as [String : UIView]
+        let Hvfl = String(format: "H:|-%f-[cropView]-%f-|", cropLeftMargin, cropRightMargin);
+        let Vvfl = String(format: "V:|-%f-[cropView]-%f-|", cropTopMargin, cropBottomMargin)
+        let cropViewHorizentalConstraints = NSLayoutConstraint.constraints(withVisualFormat: Hvfl, options: [], metrics: nil, views: views)
+        let cropViewVerticalConstraints = NSLayoutConstraint.constraints(withVisualFormat: Vvfl, options: [], metrics: nil, views: views)
+        cropViewConstraints += cropViewHorizentalConstraints
+        cropViewConstraints += cropViewVerticalConstraints
+        self.addConstraints(cropViewVerticalConstraints)
+        self.addConstraints(cropViewHorizentalConstraints)
+        self.layoutIfNeeded()
+        cropView.updateSubView()
+    }
+    
+// MARK: Handle ImageView Pan Gesture
+
+    func panImageView(sender: UIPanGestureRecognizer) {
+        var translation = sender.translation(in:sender.view)
+        translation.x = translation.x * imageZoomScale
+        translation.y = translation.y * imageZoomScale
+        let view = sender.view
+        if (view?.frame.origin.y)! + translation.y > cropTopMargin {
+            translation.y = cropTopMargin - (view?.frame.origin.y)!
+        }
+        if view!.frame.origin.x + translation.x > cropLeftMargin {
+            translation.x = cropLeftMargin - view!.frame.origin.x
+        }
+        if screenHeight - (view!.frame.origin.y + view!.frame.size.height + translation.y) >  cropBottomMargin {
+            translation.y = screenHeight - (view!.frame.origin.y + view!.frame.size.height) - cropBottomMargin
+        }
+        if screenWidth - (view!.frame.origin.x + view!.frame.size.width + translation.x) > cropRightMargin {
+            translation.x = screenWidth - (view!.frame.origin.x + view!.frame.size.width) - cropRightMargin
+        }
+        
+        view?.center = CGPoint(x: (view?.center.x)! + translation.x, y: (view?.center.y)! + translation.y)
+        sender.setTranslation(CGPoint.zero, in: view?.superview)
+    }
+    
+// MARK: Rotate Image
+
+    func rotateButtonAction() {
+        rotateImage()
+    }
+    
+    func rotateImage() {
+        let imageViewFrame = imageView.frame
+        NSLog("***********************")
+        NSLog("imageView %@", NSStringFromCGRect(imageView.frame))
+        NSLog("cropView %@", NSStringFromCGRect(cropView.frame))
+        // prepare data for rotate cropView
+        cropLeftToImage = cropView.frame.origin.x - imageView.frame.origin.x
+        cropTopToImage = cropView.frame.origin.y - imageView.frame.origin.y
+        cropRightToImage = imageView.frame.origin.x + imageView.frame.size.width - cropView.frame.origin.x - cropView.frame.size.width
+        cropBottomToImage = imageView.frame.origin.y + imageView.frame.size.height - cropView.frame.origin.y - cropView.frame.size.height
+        
+        // roate image and reset image view's image
+        let image = UIImage(cgImage: imageView.image!.cgImage!, scale: 1.0, orientation: .right)
+        let newImage = rotateImage(source: image, withOrientation: .right)
+        imageView.image = newImage
+        let frame = AVMakeRect(aspectRatio: imageView.image!.size, insideRect: self.frame);
+        imageView.frame = frame
+        originImageViewFrame = frame
+        
+        // prepare data for rotate cropView
+        let length1: CGFloat
+        let length2: CGFloat
+        if imageViewFrame.size.height > imageViewFrame.size.width {
+            length1 = imageViewFrame.size.height
+        } else {
+            length1 = imageViewFrame.size.width
+        }
+        if originImageViewFrame.size.height > imageViewFrame.size.width {
+            length2 = originImageViewFrame.size.height
+        } else {
+            length2 = originImageViewFrame.size.width
+        }
+        cropViewConstraintsRatio = length2 / length1
+        
+        
+        
+        print("leftToImage ", cropLeftToImage)
+        print("topToImage ", cropTopToImage)
+        print("rightToImage ", cropRightToImage)
+        print("bottomToImage ", cropBottomToImage)
+        print("cropViewConstraintsRatio ", cropViewConstraintsRatio)
+        
+        cropLeftMargin = cropBottomToImage * cropViewConstraintsRatio + imageView.frame.origin.x
+        cropTopMargin = cropLeftToImage * cropViewConstraintsRatio + imageView.frame.origin.y
+        cropRightMargin = cropTopToImage * cropViewConstraintsRatio + screenWidth - imageView.frame.origin.x - imageView.frame.size.width
+        cropBottomMargin = cropRightToImage * cropViewConstraintsRatio + screenHeight - imageView.frame.origin.y - imageView.frame.size.height
+        
+        print("cropLeftMargin ", cropLeftMargin)
+        print("cropTopMargin ", cropTopMargin)
+        print("cropRightMargin ", cropRightMargin)
+        print("cropBottomMargin ", cropBottomMargin)
+        imageZoomScale = 1.0
+        updateCropViewLayout()
+        adjustOverLayView()
+    }
+    
+    func rotateImage(source: UIImage, withOrientation orientation: UIImageOrientation) -> UIImage {
+        UIGraphicsBeginImageContext(source.size)
+        let context = UIGraphicsGetCurrentContext()
+        if orientation == .right {
+            context?.ctm.rotated(by: CGFloat.pi / 2)
+        } else if orientation == .left {
+            context?.ctm.rotated(by: -(CGFloat.pi / 2))
+        } else if orientation == .down {
+            // do nothing
+        } else if orientation == .up {
+            context?.ctm.rotated(by: CGFloat.pi / 2)
+        }
+        source.draw(at: CGPoint.zero)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image!
+    }
+    
+    func rotateCropView() {
+
+    }
+
+
+    
+// MARK: GestureRecognizerDelegate
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
+    }
+    
+}
+
+// MARK: Inner Classes
+
+private class CropView: UIView {
+    
+    
+    var leftUpCornerPoint:UIView!
+    var leftDownCornerPoint:UIView!
+    var rightUpCornerPoint:UIView!
+    var rightDownCornerPoint:UIView!
+    
+    var leftLine:UIView!
+    var upLine:UIView!
+    var rightLine:UIView!
+    var downLine:UIView!
+    
+    var hittedViewTag: Int?
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.isUserInteractionEnabled = true;
+        self.backgroundColor = UIColor.clear
+        self.clipsToBounds = false;
+        self.frame = frame;
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+    }
+    
+    func initCropViewSubViews() {
+        leftLine = UIView();
+        leftLine.frame = CGRect(x: 0, y: 0, width: 4, height: self.frame.size.height);
+        leftLine.backgroundColor = UIColor.white;
+        self.addSubview(leftLine);
+        leftLine.tag = LyEditImageView.LEFT_LINE_TAG;
+        
+        upLine = UIView();
+        upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: 4);
+        upLine.backgroundColor = UIColor.white;
+        self.addSubview(upLine);
+        upLine.tag = LyEditImageView.UP_LINE_TAG
+        
+        rightLine = UIView();
+        rightLine.frame = CGRect(x: self.frame.size.width - 4, y: 0, width: 4, height: self.frame.size.height);
+        rightLine.backgroundColor = UIColor.white;
+        self.addSubview(rightLine);
+        rightLine.tag = LyEditImageView.RIGHT_LINE_TAG
+        
+        downLine = UIView();
+        downLine.frame = CGRect(x:0, y: self.frame.size.height - 4, width: self.frame.size.width, height: 4);
+        downLine.backgroundColor = UIColor.white;
+        self.addSubview(downLine);
+        downLine.tag = LyEditImageView.DOWN_LINE_TAG
+        
+        leftUpCornerPoint = UIView()
+        leftUpCornerPoint.frame = CGRect(x: -5, y: -5, width: 10, height: 10)
+        leftUpCornerPoint.backgroundColor = UIColor.white
+        self.addSubview(self.leftUpCornerPoint)
+        leftUpCornerPoint.tag = LyEditImageView.LEFT_UP_TAG
+        
+        leftDownCornerPoint = UIView()
+        leftDownCornerPoint.frame = CGRect(x: -5, y: self.frame.size.height - 5, width: 10, height: 10)
+        leftDownCornerPoint.backgroundColor = UIColor.white
+        self.addSubview(self.leftDownCornerPoint)
+        leftDownCornerPoint.tag = LyEditImageView.LEFT_DOWN_TAG
+        
+        rightUpCornerPoint = UIView()
+        rightUpCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: -5, width: 10, height: 10)
+        rightUpCornerPoint.backgroundColor = UIColor.white
+        self.addSubview(self.rightUpCornerPoint)
+        rightUpCornerPoint.tag = LyEditImageView.RIGHT_UP_TAG
+        
+        rightDownCornerPoint = UIView()
+        rightDownCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: self.frame.size.height - 5, width: 10, height: 10)
+        rightDownCornerPoint.backgroundColor = UIColor.white
+        self.addSubview(self.rightDownCornerPoint)
+        rightDownCornerPoint.tag = LyEditImageView.RIGHT_DOWN_TAG
+        
+        //debugView()
+    }
+    
+    // change subview's frame after cropview's constraints updated
+    func updateSubView() {
+        leftLine.frame = CGRect(x: 0, y: 0, width: 4, height: self.frame.size.height);
+        upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: 4);
+        rightLine.frame = CGRect(x: self.frame.size.width - 4, y: 0, width: 4, height: self.frame.size.height);
+        downLine.frame = CGRect(x:0, y: self.frame.size.height - 4, width: self.frame.size.width, height: 4);
+        leftUpCornerPoint.frame = CGRect(x: -5, y: -5, width: 10, height: 10)
+        leftDownCornerPoint.frame = CGRect(x: -5, y: self.frame.size.height - 5, width: 10, height: 10)
+        rightUpCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: -5, width: 10, height: 10)
+        rightDownCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: self.frame.size.height - 5, width: 10, height: 10)
+        //debugView()
+    }
+    
+    // override point inside to enlarge subview's touch zone
+    // and add tag to subviews
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        var pointInside = false
+        
+        if self.frame.contains(convert(point, to: self.superview)) {
+            pointInside = true
+            hittedViewTag = self.tag
+        }
+        
+        for subview in subviews as [UIView] {
+            if !subview.isHidden && subview.alpha > 0
+                && subview.isUserInteractionEnabled {
+                var extendFrame: CGRect
+                extendFrame = CGRect(x: subview.frame.origin.x - 20, y: subview.frame.origin.y - 20, width: subview.frame.size.width + 40, height: subview.frame.size.height + 40)
+                if extendFrame.contains(point) {
+                    hittedViewTag = subview.tag
+                    pointInside = true
+                }
+            }
+        }
+        
+        return pointInside
+    }
+    
+    func getCropViewTag() -> Int {
+       if let tag = hittedViewTag {
+            return tag
+        }
+        return 0;
+    }
+    
+    func debugView() {
+        for subview in subviews {
+            subview.isUserInteractionEnabled = true;
+            //test
+            subview.backgroundColor = UIColor.blue
+            var extendFrame: CGRect
+            if subview.tag == LyEditImageView.DOWN_LINE_TAG {
+                extendFrame = CGRect(x: subview.frame.origin.x - 10, y: subview.frame.origin.y, width: subview.frame.size.width + 20, height: subview.frame.size.height + 20)
+                //extendFrame = subview.frame
+            } else {
+                extendFrame = CGRect(x: subview.frame.origin.x - 10, y: subview.frame.origin.y - 10, width: subview.frame.size.width + 20, height: subview.frame.size.height + 20)
+            }
+            subview.frame = extendFrame
+        }
+    }
+}
+
+private class OverLayView: UIView {
+    var cropRect : CGRect?
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.isUserInteractionEnabled = false;
+        self.backgroundColor = UIColor.clear;
+    }
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+    }
+    func setOverLayView(cropRect: CGRect) {
+        self.cropRect = cropRect
+    }
+    override func draw(_ rect: CGRect) {
+        
+        UIColor.init(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.2).set()
+        UIRectFill(self.frame)
+        let intersecitonRect = self.frame.intersection(self.cropRect!)
+        UIColor.init(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0).set()
+        UIRectFill(intersecitonRect)
+    }
+}
+

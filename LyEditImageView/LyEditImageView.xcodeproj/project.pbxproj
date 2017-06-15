@@ -7,8 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		007392841EF10E7E004BAA12 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 007392831EF10E7E004BAA12 /* ViewController.swift */; };
+		0073928A1EF15A7B004BAA12 /* accept.png in Resources */ = {isa = PBXBuildFile; fileRef = 007392871EF15A7B004BAA12 /* accept.png */; };
+		0073928B1EF15A7B004BAA12 /* cancel.png in Resources */ = {isa = PBXBuildFile; fileRef = 007392881EF15A7B004BAA12 /* cancel.png */; };
+		0073928C1EF15A7B004BAA12 /* rotate.png in Resources */ = {isa = PBXBuildFile; fileRef = 007392891EF15A7B004BAA12 /* rotate.png */; };
 		00E4CE571EEBA62C00F6153D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E4CE561EEBA62C00F6153D /* AppDelegate.swift */; };
-		00E4CE591EEBA62C00F6153D /* LyEditImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E4CE581EEBA62C00F6153D /* LyEditImageViewController.swift */; };
+		00E4CE591EEBA62C00F6153D /* LyEditImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E4CE581EEBA62C00F6153D /* LyEditImageView.swift */; };
 		00E4CE5C1EEBA62C00F6153D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 00E4CE5A1EEBA62C00F6153D /* Main.storyboard */; };
 		00E4CE5E1EEBA62C00F6153D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00E4CE5D1EEBA62C00F6153D /* Assets.xcassets */; };
 		00E4CE611EEBA62C00F6153D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 00E4CE5F1EEBA62C00F6153D /* LaunchScreen.storyboard */; };
@@ -16,9 +20,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		007392831EF10E7E004BAA12 /* ViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		007392871EF15A7B004BAA12 /* accept.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = accept.png; sourceTree = "<group>"; };
+		007392881EF15A7B004BAA12 /* cancel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = cancel.png; sourceTree = "<group>"; };
+		007392891EF15A7B004BAA12 /* rotate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = rotate.png; sourceTree = "<group>"; };
 		00E4CE531EEBA62C00F6153D /* LyEditImageView.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LyEditImageView.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		00E4CE561EEBA62C00F6153D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		00E4CE581EEBA62C00F6153D /* LyEditImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyEditImageViewController.swift; sourceTree = "<group>"; };
+		00E4CE581EEBA62C00F6153D /* LyEditImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyEditImageView.swift; sourceTree = "<group>"; };
 		00E4CE5B1EEBA62C00F6153D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		00E4CE5D1EEBA62C00F6153D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		00E4CE601EEBA62C00F6153D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -57,12 +65,16 @@
 			isa = PBXGroup;
 			children = (
 				00E4CE561EEBA62C00F6153D /* AppDelegate.swift */,
-				00E4CE581EEBA62C00F6153D /* LyEditImageViewController.swift */,
+				00E4CE581EEBA62C00F6153D /* LyEditImageView.swift */,
+				007392831EF10E7E004BAA12 /* ViewController.swift */,
 				00E4CE5A1EEBA62C00F6153D /* Main.storyboard */,
 				00E4CE5D1EEBA62C00F6153D /* Assets.xcassets */,
 				00E4CE5F1EEBA62C00F6153D /* LaunchScreen.storyboard */,
 				00E4CE621EEBA62C00F6153D /* Info.plist */,
 				00E4CE681EEBB40E00F6153D /* IMG_2796.JPG */,
+				007392871EF15A7B004BAA12 /* accept.png */,
+				007392881EF15A7B004BAA12 /* cancel.png */,
+				007392891EF15A7B004BAA12 /* rotate.png */,
 			);
 			path = LyEditImageView;
 			sourceTree = "<group>";
@@ -127,8 +139,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0073928C1EF15A7B004BAA12 /* rotate.png in Resources */,
 				00E4CE611EEBA62C00F6153D /* LaunchScreen.storyboard in Resources */,
 				00E4CE5E1EEBA62C00F6153D /* Assets.xcassets in Resources */,
+				0073928A1EF15A7B004BAA12 /* accept.png in Resources */,
+				0073928B1EF15A7B004BAA12 /* cancel.png in Resources */,
 				00E4CE5C1EEBA62C00F6153D /* Main.storyboard in Resources */,
 				00E4CE691EEBB40E00F6153D /* IMG_2796.JPG in Resources */,
 			);
@@ -141,7 +156,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				00E4CE591EEBA62C00F6153D /* LyEditImageViewController.swift in Sources */,
+				007392841EF10E7E004BAA12 /* ViewController.swift in Sources */,
+				00E4CE591EEBA62C00F6153D /* LyEditImageView.swift in Sources */,
 				00E4CE571EEBA62C00F6153D /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -269,6 +285,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 84A6Z2YQ4T;
 				INFOPLIST_FILE = LyEditImageView/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = example.LyEditImageView;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -282,6 +299,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 84A6Z2YQ4T;
 				INFOPLIST_FILE = LyEditImageView/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = example.LyEditImageView;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -308,6 +326,7 @@
 				00E4CE671EEBA62C00F6153D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
