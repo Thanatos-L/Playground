@@ -148,6 +148,7 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         let cropButton = UIButton()
         cropButton.frame = CGRect(x: screenWidth / 4 - 25, y: screenHeight - 100, width: 50, height: 50)
         cropButton.setImage(UIImage(named: "accept.png"), for: UIControlState.normal)
+        cropButton.addTarget(self, action: #selector(acceptButtonAction), for: .touchUpInside)
         self.addSubview(cropButton)
         
         let rotateButton = UIButton()
@@ -231,7 +232,7 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         }
     }
     
-    // MARK: Handle CropView Pan Gesture
+    // MARK: Handle CropView / ImageView Pan Gesture
     @objc fileprivate func handlePanGesture(sender: UIPanGestureRecognizer) {
         let piceView = sender.view
         if sender.state == UIGestureRecognizerState.began {
@@ -246,6 +247,7 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         }
         if sender.state == UIGestureRecognizerState.ended
             || sender.state == UIGestureRecognizerState.cancelled {
+            cropView.resetHightLightView()
         }
     }
     
@@ -454,26 +456,36 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         rotateImage()
     }
     
+    // rotate imageView's image and rotate cropView
     func rotateImage() {
         let imageViewFrame = imageView.frame
-        NSLog("***********************")
-        NSLog("imageView %@", NSStringFromCGRect(imageView.frame))
-        NSLog("cropView %@", NSStringFromCGRect(cropView.frame))
         // prepare data for rotate cropView
         cropLeftToImage = cropView.frame.origin.x - imageView.frame.origin.x
         cropTopToImage = cropView.frame.origin.y - imageView.frame.origin.y
         cropRightToImage = imageView.frame.origin.x + imageView.frame.size.width - cropView.frame.origin.x - cropView.frame.size.width
         cropBottomToImage = imageView.frame.origin.y + imageView.frame.size.height - cropView.frame.origin.y - cropView.frame.size.height
-        
+        if cropLeftToImage < 0 {
+            cropLeftToImage = 0
+        }
+        if cropTopToImage < 0 {
+            cropTopToImage = 0
+        }
+        if cropRightToImage < 0 {
+            cropRightToImage = 0
+        }
+        if cropBottomToImage < 0 {
+            cropBottomToImage = 0
+        }
         // roate image and reset image view's image
         let image = UIImage(cgImage: imageView.image!.cgImage!, scale: 1.0, orientation: .right)
         let newImage = rotateImage(source: image, withOrientation: .right)
         imageView.image = newImage
+        imageView.transform = CGAffineTransform.identity
         let frame = AVMakeRect(aspectRatio: imageView.image!.size, insideRect: self.frame);
         imageView.frame = frame
         originImageViewFrame = frame
         
-        // prepare data for rotate cropView
+        // prepare data for rotate cropView, note that imageView.frame is changed
         let length1: CGFloat
         let length2: CGFloat
         if imageViewFrame.size.height > imageViewFrame.size.width {
@@ -481,32 +493,21 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         } else {
             length1 = imageViewFrame.size.width
         }
-        if originImageViewFrame.size.height > imageViewFrame.size.width {
+        if originImageViewFrame.size.height > originImageViewFrame.size.width {
             length2 = originImageViewFrame.size.height
         } else {
             length2 = originImageViewFrame.size.width
         }
         cropViewConstraintsRatio = length2 / length1
         
-        
-        
-        print("leftToImage ", cropLeftToImage)
-        print("topToImage ", cropTopToImage)
-        print("rightToImage ", cropRightToImage)
-        print("bottomToImage ", cropBottomToImage)
-        print("cropViewConstraintsRatio ", cropViewConstraintsRatio)
-        
         cropLeftMargin = cropBottomToImage * cropViewConstraintsRatio + imageView.frame.origin.x
         cropTopMargin = cropLeftToImage * cropViewConstraintsRatio + imageView.frame.origin.y
         cropRightMargin = cropTopToImage * cropViewConstraintsRatio + screenWidth - imageView.frame.origin.x - imageView.frame.size.width
         cropBottomMargin = cropRightToImage * cropViewConstraintsRatio + screenHeight - imageView.frame.origin.y - imageView.frame.size.height
         
-        print("cropLeftMargin ", cropLeftMargin)
-        print("cropTopMargin ", cropTopMargin)
-        print("cropRightMargin ", cropRightMargin)
-        print("cropBottomMargin ", cropBottomMargin)
         imageZoomScale = 1.0
         updateCropViewLayout()
+        cropView.resetHightLightView()
         adjustOverLayView()
     }
     
@@ -528,11 +529,33 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         return image!
     }
     
-    func rotateCropView() {
-
+// MARK: Crop Image
+    func acceptButtonAction() {
+        cropImage()
+    }
+    
+    func cropImage() {
+        let rect = self.convert(cropView.frame, to: imageView)
+        let imageSize = imageView.image?.size
+        let ratio = originImageViewFrame.size.width / (imageSize?.width)!
+        let zoomedRect = CGRect(x: rect.origin.x / ratio, y: rect.origin.y / ratio, width: rect.size.width / ratio, height: rect.size.height / ratio)
+        let croppedImage = cropImage(image: imageView.image!, toRect: zoomedRect)
+        var view: UIImageView? =  self.viewWithTag(1301) as? UIImageView
+        if view == nil {
+            view = UIImageView()
+        }
+        view?.frame = CGRect(x: 0, y: 0, width: croppedImage.size.width / 3, height: croppedImage.size.height / 3)
+        view?.image = croppedImage
+    
+        view?.tag = 1301
+        self.addSubview(view!)
     }
 
-
+    func cropImage(image: UIImage, toRect rect: CGRect) -> UIImage {
+        let imageRef = image.cgImage?.cropping(to: rect)
+        let croppedImage = UIImage(cgImage: imageRef!)
+        return croppedImage
+    }
     
 // MARK: GestureRecognizerDelegate
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -558,6 +581,8 @@ private class CropView: UIView {
     
     var hittedViewTag: Int?
     
+    let LINE_WIDTH:CGFloat = 2
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.isUserInteractionEnabled = true;
@@ -572,25 +597,25 @@ private class CropView: UIView {
     
     func initCropViewSubViews() {
         leftLine = UIView();
-        leftLine.frame = CGRect(x: 0, y: 0, width: 4, height: self.frame.size.height);
+        leftLine.frame = CGRect(x: 0, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
         leftLine.backgroundColor = UIColor.white;
         self.addSubview(leftLine);
         leftLine.tag = LyEditImageView.LEFT_LINE_TAG;
         
         upLine = UIView();
-        upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: 4);
+        upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: LINE_WIDTH);
         upLine.backgroundColor = UIColor.white;
         self.addSubview(upLine);
         upLine.tag = LyEditImageView.UP_LINE_TAG
         
         rightLine = UIView();
-        rightLine.frame = CGRect(x: self.frame.size.width - 4, y: 0, width: 4, height: self.frame.size.height);
+        rightLine.frame = CGRect(x: self.frame.size.width - LINE_WIDTH, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
         rightLine.backgroundColor = UIColor.white;
         self.addSubview(rightLine);
         rightLine.tag = LyEditImageView.RIGHT_LINE_TAG
         
         downLine = UIView();
-        downLine.frame = CGRect(x:0, y: self.frame.size.height - 4, width: self.frame.size.width, height: 4);
+        downLine.frame = CGRect(x:0, y: self.frame.size.height - LINE_WIDTH, width: self.frame.size.width, height: LINE_WIDTH);
         downLine.backgroundColor = UIColor.white;
         self.addSubview(downLine);
         downLine.tag = LyEditImageView.DOWN_LINE_TAG
@@ -624,15 +649,16 @@ private class CropView: UIView {
     
     // change subview's frame after cropview's constraints updated
     func updateSubView() {
-        leftLine.frame = CGRect(x: 0, y: 0, width: 4, height: self.frame.size.height);
-        upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: 4);
-        rightLine.frame = CGRect(x: self.frame.size.width - 4, y: 0, width: 4, height: self.frame.size.height);
-        downLine.frame = CGRect(x:0, y: self.frame.size.height - 4, width: self.frame.size.width, height: 4);
+        leftLine.frame = CGRect(x: 0, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
+        upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: LINE_WIDTH);
+        rightLine.frame = CGRect(x: self.frame.size.width - LINE_WIDTH, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
+        downLine.frame = CGRect(x:0, y: self.frame.size.height - LINE_WIDTH, width: self.frame.size.width, height: LINE_WIDTH);
         leftUpCornerPoint.frame = CGRect(x: -5, y: -5, width: 10, height: 10)
         leftDownCornerPoint.frame = CGRect(x: -5, y: self.frame.size.height - 5, width: 10, height: 10)
         rightUpCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: -5, width: 10, height: 10)
         rightDownCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: self.frame.size.height - 5, width: 10, height: 10)
-        //debugView()
+        // hightlight view for pan gesture
+        hightLightTouchedView()
     }
     
     // override point inside to enlarge subview's touch zone
@@ -649,7 +675,15 @@ private class CropView: UIView {
             if !subview.isHidden && subview.alpha > 0
                 && subview.isUserInteractionEnabled {
                 var extendFrame: CGRect
-                extendFrame = CGRect(x: subview.frame.origin.x - 20, y: subview.frame.origin.y - 20, width: subview.frame.size.width + 40, height: subview.frame.size.height + 40)
+                if subview.tag == LyEditImageView.UP_LINE_TAG || subview.tag == LyEditImageView.DOWN_LINE_TAG {
+                    extendFrame = CGRect(x: subview.frame.origin.x + 25, y: subview.frame.origin.y - 20, width: subview.frame.size.width - 50, height: subview.frame.size.height + 40)
+                    
+                } else if subview.tag == LyEditImageView.LEFT_LINE_TAG || subview.tag == LyEditImageView.RIGHT_LINE_TAG {
+                    extendFrame = CGRect(x: subview.frame.origin.x - 20, y: subview.frame.origin.y + 25, width: subview.frame.size.width + 40, height: subview.frame.size.height - 50)
+                    
+                } else {
+                    extendFrame = CGRect(x: subview.frame.origin.x - 20, y: subview.frame.origin.y - 20, width: subview.frame.size.width + 40, height: subview.frame.size.height + 40)
+                }
                 if extendFrame.contains(point) {
                     hittedViewTag = subview.tag
                     pointInside = true
@@ -667,17 +701,55 @@ private class CropView: UIView {
         return 0;
     }
     
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        hightLightTouchedView()
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        resetHightLightView()
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        resetHightLightView()
+    }
+    
+    func hightLightTouchedView() {
+        if hittedViewTag != nil {
+            if hittedViewTag == LyEditImageView.UP_LINE_TAG || hittedViewTag == LyEditImageView.DOWN_LINE_TAG {
+                let view = viewWithTag(hittedViewTag!)
+                view!.frame = CGRect(x: view!.frame.origin.x + 5, y: view!.frame.origin.y - LINE_WIDTH, width: view!.frame.size.width - 5, height: view!.frame.size.height + LINE_WIDTH * 2)
+            } else if hittedViewTag == LyEditImageView.RIGHT_LINE_TAG || hittedViewTag == LyEditImageView.LEFT_LINE_TAG {
+                let view = viewWithTag(hittedViewTag!)
+                view!.frame = CGRect(x: view!.frame.origin.x - LINE_WIDTH, y: view!.frame.origin.y + 5, width: view!.frame.size.width + LINE_WIDTH * 2, height: view!.frame.size.height - 5)
+            }
+        }
+    }
+    
+    func resetHightLightView() {
+        leftLine.frame = CGRect(x: 0, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
+        upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: LINE_WIDTH);
+        rightLine.frame = CGRect(x: self.frame.size.width - LINE_WIDTH, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
+        downLine.frame = CGRect(x:0, y: self.frame.size.height - LINE_WIDTH, width: self.frame.size.width, height: LINE_WIDTH);
+        leftUpCornerPoint.frame = CGRect(x: -5, y: -5, width: 10, height: 10)
+        leftDownCornerPoint.frame = CGRect(x: -5, y: self.frame.size.height - 5, width: 10, height: 10)
+        rightUpCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: -5, width: 10, height: 10)
+        rightDownCornerPoint.frame = CGRect(x: self.frame.size.width - 5, y: self.frame.size.height - 5, width: 10, height: 10)
+    }
+    
     func debugView() {
         for subview in subviews {
             subview.isUserInteractionEnabled = true;
             //test
             subview.backgroundColor = UIColor.blue
             var extendFrame: CGRect
-            if subview.tag == LyEditImageView.DOWN_LINE_TAG {
-                extendFrame = CGRect(x: subview.frame.origin.x - 10, y: subview.frame.origin.y, width: subview.frame.size.width + 20, height: subview.frame.size.height + 20)
-                //extendFrame = subview.frame
+            if subview.tag == LyEditImageView.UP_LINE_TAG || subview.tag == LyEditImageView.DOWN_LINE_TAG {
+                extendFrame = CGRect(x: subview.frame.origin.x + 25, y: subview.frame.origin.y - 20, width: subview.frame.size.width - 50, height: subview.frame.size.height + 40)
+                subview.backgroundColor = UIColor.red
+            } else if subview.tag == LyEditImageView.LEFT_LINE_TAG || subview.tag == LyEditImageView.RIGHT_LINE_TAG {
+                extendFrame = CGRect(x: subview.frame.origin.x - 20, y: subview.frame.origin.y + 25, width: subview.frame.size.width + 40, height: subview.frame.size.height - 50)
+                subview.backgroundColor = UIColor.red
             } else {
-                extendFrame = CGRect(x: subview.frame.origin.x - 10, y: subview.frame.origin.y - 10, width: subview.frame.size.width + 20, height: subview.frame.size.height + 20)
+                extendFrame = CGRect(x: subview.frame.origin.x - 20, y: subview.frame.origin.y - 20, width: subview.frame.size.width + 40, height: subview.frame.size.height + 40)
             }
             subview.frame = extendFrame
         }

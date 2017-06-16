@@ -10,12 +10,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "LyEditImageView/LyEditImageView.swift"
-            timestampString = "519221116.941899"
+            timestampString = "519292809.294038"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "240"
-            endingLineNumber = "240"
-            landmarkName = "handlePanGesture(sender:)"
+            startingLineNumber = "689"
+            endingLineNumber = "689"
+            landmarkName = "point(inside:with:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
