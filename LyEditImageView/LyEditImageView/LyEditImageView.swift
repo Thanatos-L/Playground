@@ -11,7 +11,7 @@ import UIKit
 import AVFoundation
 
 
-class LyEditImageView: UIView, UIGestureRecognizerDelegate {
+class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
     let CROP_VIEW_TAG = 1001
     let IMAGE_VIEW_TAG = 1002
     static let LEFT_UP_TAG = 1101
@@ -126,6 +126,7 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         cropView = CropView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
         cropView.tag = CROP_VIEW_TAG;
         cropView.translatesAutoresizingMaskIntoConstraints = false
+        cropView.delegate = self
         self.addSubview(cropView)
 
 //        cropRightMargin = (CGFloat)(originImageViewFrame.size.width / 2) - (CGFloat)(INIT_CROP_VIEW_SIZE / 2)
@@ -151,6 +152,7 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         
         cropView.initCropViewSubViews()
         adjustOverLayView()
+        overLayView.addBlurOverLayer(cropRect: cropView.frame)
     }
     
     private func initOverLayView() {
@@ -534,6 +536,8 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
         updateCropViewLayout()
         cropView.resetHightLightView()
         adjustOverLayView()
+        overLayView.removeBlurOverLayer()
+        overLayView.updateBlurOverLay(cropRect: cropView.frame)
     }
     
     func rotateImage(source: UIImage, withOrientation orientation: UIImageOrientation) -> UIImage {
@@ -585,14 +589,21 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
 //MARK: touches method for blur view
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         print("begin")
+        overLayView.delayTask.cancel()
         overLayView.removeBlurOverLayer()
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         print("end")
-        overLayView.addBlurOverLayer(cropRect: cropView.frame)
+        overLayView.updateBlurOverLay(cropRect: cropView.frame)
     }
-    
+//    func cropRemoveBlurOverLay() {
+//        overLayView.delayTask.cancel()
+//        overLayView.removeBlurOverLayer()
+//    }
+//    func cropAddBlurOverLay(cropRect: CGRect) {
+//        overLayView.updateBlurOverLay(cropRect: cropRect)
+//    }
 // MARK: GestureRecognizerDelegate
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
@@ -604,10 +615,15 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate {
 }
 
 // MARK: Inner Classes
+@objc protocol CropViewDelegate {
+    @objc optional func cropAddBlurOverLay(cropRect: CGRect)
+    @objc optional func cropRemoveBlurOverLay()
+}
 
 private class CropView: UIView {
     
-    
+    let LINE_WIDTH:CGFloat = 2
+
     var leftUpCornerPoint:UIView!
     var leftDownCornerPoint:UIView!
     var rightUpCornerPoint:UIView!
@@ -619,8 +635,8 @@ private class CropView: UIView {
     var downLine:UIView!
     
     var hittedViewTag: Int?
+    var delegate: CropViewDelegate?
     
-    let LINE_WIDTH:CGFloat = 2
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -756,11 +772,19 @@ private class CropView: UIView {
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        print("cropview began")
         updateSubView()
+        delegate?.cropRemoveBlurOverLay?()
     }
     
+//    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+//        delegate?.cropAddBlurOverLay!(cropRect: self.frame)
+//    }
+    
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        print("cropview end")
         resetHightLightView()
+        delegate?.cropAddBlurOverLay?(cropRect: self.frame)
     }
     
     func resetHightLightView() {
@@ -794,12 +818,18 @@ private class OverLayView: UIView {
     var cropRect : CGRect?
     var blurEffectView: UIVisualEffectView!
     var blurEffect: UIBlurEffect!
+    var delayTask: DispatchWorkItem!
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.isUserInteractionEnabled = false;
         self.backgroundColor = UIColor.clear;
-        blurEffect = UIBlurEffect(style: UIBlurEffectStyle.light)
+        blurEffect = UIBlurEffect(style: UIBlurEffectStyle.dark)
         blurEffectView = UIVisualEffectView(effect: blurEffect)
+        delayTask = DispatchWorkItem { [unowned self] in
+            UIView.animate(withDuration: 0.5, animations: {
+                self.blurEffectView.alpha = 1
+            })
+        }
     }
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
@@ -826,7 +856,7 @@ private class OverLayView: UIView {
         maskView.backgroundColor = UIColor.clear
         
         let outerbezierPath = UIBezierPath.init(roundedRect: blurEffectView.bounds, cornerRadius: 0)
-        //let rect = CGRect(x: 150, y: 250, width: 150, height: 150)
+        
         let innerCirclepath = UIBezierPath.init(rect: cropRect)
         outerbezierPath.append(innerCirclepath)
         outerbezierPath.usesEvenOddFillRule = true
@@ -841,9 +871,29 @@ private class OverLayView: UIView {
         self.addSubview(blurEffectView)
     }
     
+    func updateBlurOverLay(cropRect: CGRect) {
+        let maskView = UIView(frame: blurEffectView.bounds)
+        maskView.clipsToBounds = true;
+        maskView.backgroundColor = UIColor.clear
+        
+        let outerbezierPath = UIBezierPath.init(roundedRect: blurEffectView.bounds, cornerRadius: 0)
+        let innerCirclepath = UIBezierPath.init(rect: cropRect)
+        outerbezierPath.append(innerCirclepath)
+        outerbezierPath.usesEvenOddFillRule = true
+        
+        let fillLayer = CAShapeLayer()
+        fillLayer.fillRule = kCAFillRuleEvenOdd
+        fillLayer.fillColor = UIColor.green.cgColor
+        fillLayer.path = outerbezierPath.cgPath
+        maskView.layer.addSublayer(fillLayer)
+        blurEffectView.mask = maskView
+        
+        let when = DispatchTime.now() + 1
+        DispatchQueue.main.asyncAfter(deadline: when, execute: delayTask)
+    }
+    
     func removeBlurOverLayer() {
-        blurEffectView.removeFromSuperview()
-        blurEffectView = nil
+        blurEffectView.alpha = 0
     }
     
 }
