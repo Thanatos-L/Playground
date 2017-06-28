@@ -97,15 +97,18 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
         panGestureRecognizer = UIPanGestureRecognizer()
         panGestureRecognizer.addTarget(self, action: #selector(handlePanGesture(sender:)))
         panGestureRecognizer.cancelsTouchesInView = false
-       panGestureRecognizer.delaysTouchesBegan = false
+        panGestureRecognizer.delaysTouchesBegan = false
         panGestureRecognizer.delaysTouchesEnded = false;
+        panGestureRecognizer.delegate = self
         imageView.addGestureRecognizer(panGestureRecognizer)
+        
         
         cropViewPanGesture = UIPanGestureRecognizer()
         cropViewPanGesture.addTarget(self, action: #selector(handlePanGesture(sender:)))
         cropViewPanGesture.cancelsTouchesInView = false;
         cropViewPanGesture.delaysTouchesBegan = false
         cropViewPanGesture.delaysTouchesEnded = false
+        cropViewPanGesture.delegate = self
         cropView.addGestureRecognizer(cropViewPanGesture)
         
         pinchGestureRecognizer = UIPinchGestureRecognizer()
@@ -113,6 +116,7 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
         pinchGestureRecognizer.cancelsTouchesInView = false
         pinchGestureRecognizer.delaysTouchesBegan = false
         pinchGestureRecognizer.delaysTouchesEnded = false
+        pinchGestureRecognizer.delegate = self
         self.addGestureRecognizer(pinchGestureRecognizer)
     }
     
@@ -152,7 +156,7 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
         
         cropView.initCropViewSubViews()
         adjustOverLayView()
-        overLayView.addBlurOverLayer(cropRect: cropView.frame)
+        //overLayView.addBlurOverLayer(cropRect: cropView.frame)
     }
     
     private func initOverLayView() {
@@ -587,18 +591,18 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
     }
     
 //MARK: touches method for blur view
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        print("begin")
-        overLayView.delayTask.cancel()
-        overLayView.removeBlurOverLayer()
-    }
-    
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        print("end")
-        overLayView.updateBlurOverLay(cropRect: cropView.frame)
-    }
+//    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+//        print("begin")
+//        //overLayView.delayTask.cancel()
+//        overLayView.removeBlurOverLayer()
+//    }
+//    
+//    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+//        print("end")
+//        overLayView.updateBlurOverLay(cropRect: cropView.frame)
+//    }
 //    func cropRemoveBlurOverLay() {
-//        overLayView.delayTask.cancel()
+//        //overLayView.delayTask.cancel()
 //        overLayView.removeBlurOverLayer()
 //    }
 //    func cropAddBlurOverLay(cropRect: CGRect) {
@@ -705,6 +709,7 @@ private class CropView: UIView {
     // change subview's frame after cropview's constraints updated
     // hightlight the view been selected
     func updateSubView() {
+        print("updateSubView")
         if hittedViewTag == LyEditImageView.LEFT_LINE_TAG {
             leftLine.frame = CGRect(x: -LINE_WIDTH, y: 0, width: LINE_WIDTH * 2, height: self.frame.size.height);
         } else {
@@ -788,6 +793,7 @@ private class CropView: UIView {
     }
     
     func resetHightLightView() {
+        print("resetHightLightView")
         leftLine.frame = CGRect(x: 0, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
         upLine.frame = CGRect(x: 0, y: 0, width: self.frame.size.width, height: LINE_WIDTH);
         rightLine.frame = CGRect(x: self.frame.size.width - LINE_WIDTH, y: 0, width: LINE_WIDTH, height: self.frame.size.height);
@@ -890,6 +896,9 @@ private class OverLayView: UIView {
         
         let when = DispatchTime.now() + 1
         DispatchQueue.main.asyncAfter(deadline: when, execute: delayTask)
+//        UIView.animate(withDuration: 1.5, animations: { [unowned self] in
+//            self.blurEffectView.alpha = 1
+//        })
     }
     
     func removeBlurOverLayer() {
