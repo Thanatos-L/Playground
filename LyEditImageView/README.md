@@ -9,8 +9,9 @@ Pan Crop View | Zoom, Rotate and Crop Image
 ![](https://github.com/Thanatos-L/Playground/blob/master/LyEditImageView/readme/1.gif) | ![](https://github.com/Thanatos-L/Playground/blob/master/LyEditImageView/readme/2.gif)
 
 ## Quick Start
+1. Download and add LyEditImageView.swift to your project
 
-To add a LyEditImageView in your viewController:
+2. To add a LyEditImageView in your viewController:
 ```
 let editView = LyEditImageView(frame: frame)
 let image = yourimage
@@ -18,7 +19,7 @@ editView.initWithImage(image: yourimage)
 self.yourview.addSubview(editView)
 ```
 
-Then get the cropped image:
+3. Then get the cropped image:
 ```
 let croppedImage = editView.getCroppedImage()
 
