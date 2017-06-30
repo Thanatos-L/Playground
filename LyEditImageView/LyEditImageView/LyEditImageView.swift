@@ -133,15 +133,15 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
         cropView.delegate = self
         self.addSubview(cropView)
 
-//        cropRightMargin = (CGFloat)(originImageViewFrame.size.width / 2) - (CGFloat)(INIT_CROP_VIEW_SIZE / 2)
-//        cropLeftMargin = cropRightMargin
-//        cropTopMargin = (CGFloat)(originImageViewFrame.size.height / 2) - (CGFloat)(INIT_CROP_VIEW_SIZE / 2) + (CGFloat)((screenHeight - originImageViewFrame.size.height) / 2)
-//        cropBottomMargin = cropTopMargin
+        cropRightMargin = (CGFloat)(originImageViewFrame.size.width / 2) - (CGFloat)(INIT_CROP_VIEW_SIZE / 2)
+        cropLeftMargin = cropRightMargin
+        cropTopMargin = (CGFloat)(originImageViewFrame.size.height / 2) - (CGFloat)(INIT_CROP_VIEW_SIZE / 2) + (CGFloat)((screenHeight - originImageViewFrame.size.height) / 2)
+        cropBottomMargin = cropTopMargin
         
-        cropLeftMargin = originImageViewFrame.origin.x + 10
-        cropTopMargin = originImageViewFrame.origin.y + 10
-        cropRightMargin = screenWidth - originImageViewFrame.origin.x - originImageViewFrame.size.width + 10
-        cropBottomMargin = screenHeight - originImageViewFrame.origin.y - originImageViewFrame.size.height + 10
+//        cropLeftMargin = originImageViewFrame.origin.x + 10
+//        cropTopMargin = originImageViewFrame.origin.y + 10
+//        cropRightMargin = screenWidth - originImageViewFrame.origin.x - originImageViewFrame.size.width + 10
+//        cropBottomMargin = screenHeight - originImageViewFrame.origin.y - originImageViewFrame.size.height + 10
         
         let views = ["cropView":cropView!, "imageView":imageView!] as [String : UIView]
         let Hvfl = String(format: "H:|-%f-[cropView]-%f-|", cropLeftMargin, cropRightMargin);
@@ -540,8 +540,6 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
         updateCropViewLayout()
         cropView.resetHightLightView()
         adjustOverLayView()
-        overLayView.removeBlurOverLayer()
-        overLayView.updateBlurOverLay(cropRect: cropView.frame)
     }
     
     func rotateImage(source: UIImage, withOrientation orientation: UIImageOrientation) -> UIImage {
@@ -563,16 +561,19 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
     }
     
 // MARK: Crop Image
-    func acceptButtonAction() {
+    // Todo: you need to implement this function for custom purpose
+    @objc private func acceptButtonAction() {
         cropImage()
     }
     
-    func cropImage() {
+    private func cropImage() {
         let rect = self.convert(cropView.frame, to: imageView)
         let imageSize = imageView.image?.size
         let ratio = originImageViewFrame.size.width / (imageSize?.width)!
         let zoomedRect = CGRect(x: rect.origin.x / ratio, y: rect.origin.y / ratio, width: rect.size.width / ratio, height: rect.size.height / ratio)
         let croppedImage = cropImage(image: imageView.image!, toRect: zoomedRect)
+    
+        // delete these code for custom purpose
         var view: UIImageView? =  self.viewWithTag(1301) as? UIImageView
         if view == nil {
             view = UIImageView()
@@ -582,32 +583,24 @@ class LyEditImageView: UIView, UIGestureRecognizerDelegate, CropViewDelegate {
     
         view?.tag = 1301
         self.addSubview(view!)
+        // delete these code for custom purpose
     }
 
-    func cropImage(image: UIImage, toRect rect: CGRect) -> UIImage {
+    private func cropImage(image: UIImage, toRect rect: CGRect) -> UIImage {
         let imageRef = image.cgImage?.cropping(to: rect)
         let croppedImage = UIImage(cgImage: imageRef!)
         return croppedImage
     }
     
-//MARK: touches method for blur view
-//    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-//        print("begin")
-//        //overLayView.delayTask.cancel()
-//        overLayView.removeBlurOverLayer()
-//    }
-//    
-//    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-//        print("end")
-//        overLayView.updateBlurOverLay(cropRect: cropView.frame)
-//    }
-//    func cropRemoveBlurOverLay() {
-//        //overLayView.delayTask.cancel()
-//        overLayView.removeBlurOverLayer()
-//    }
-//    func cropAddBlurOverLay(cropRect: CGRect) {
-//        overLayView.updateBlurOverLay(cropRect: cropRect)
-//    }
+    func getCroppedImage() -> UIImage {
+        let rect = self.convert(cropView.frame, to: imageView)
+        let imageSize = imageView.image?.size
+        let ratio = originImageViewFrame.size.width / (imageSize?.width)!
+        let zoomedRect = CGRect(x: rect.origin.x / ratio, y: rect.origin.y / ratio, width: rect.size.width / ratio, height: rect.size.height / ratio)
+        let croppedImage = cropImage(image: imageView.image!, toRect: zoomedRect)
+        return croppedImage;
+    }
+    
 // MARK: GestureRecognizerDelegate
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
@@ -782,10 +775,6 @@ private class CropView: UIView {
         delegate?.cropRemoveBlurOverLay?()
     }
     
-//    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-//        delegate?.cropAddBlurOverLay!(cropRect: self.frame)
-//    }
-    
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         print("cropview end")
         resetHightLightView()
@@ -850,59 +839,6 @@ private class OverLayView: UIView {
         let intersecitonRect = self.frame.intersection(self.cropRect!)
         UIColor.init(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0).set()
         UIRectFill(intersecitonRect)
-    }
-    func addBlurOverLayer(cropRect: CGRect) {
-        //always fill the view
-        blurEffect = UIBlurEffect(style: UIBlurEffectStyle.light)
-        blurEffectView = UIVisualEffectView(effect: blurEffect)
-        blurEffectView.frame = self.bounds
-        
-        let maskView = UIView(frame: blurEffectView.bounds)
-        maskView.clipsToBounds = true;
-        maskView.backgroundColor = UIColor.clear
-        
-        let outerbezierPath = UIBezierPath.init(roundedRect: blurEffectView.bounds, cornerRadius: 0)
-        
-        let innerCirclepath = UIBezierPath.init(rect: cropRect)
-        outerbezierPath.append(innerCirclepath)
-        outerbezierPath.usesEvenOddFillRule = true
-        
-        let fillLayer = CAShapeLayer()
-        fillLayer.fillRule = kCAFillRuleEvenOdd
-        fillLayer.fillColor = UIColor.green.cgColor
-        fillLayer.path = outerbezierPath.cgPath
-        maskView.layer.addSublayer(fillLayer)
-        
-        blurEffectView.mask = maskView
-        self.addSubview(blurEffectView)
-    }
-    
-    func updateBlurOverLay(cropRect: CGRect) {
-        let maskView = UIView(frame: blurEffectView.bounds)
-        maskView.clipsToBounds = true;
-        maskView.backgroundColor = UIColor.clear
-        
-        let outerbezierPath = UIBezierPath.init(roundedRect: blurEffectView.bounds, cornerRadius: 0)
-        let innerCirclepath = UIBezierPath.init(rect: cropRect)
-        outerbezierPath.append(innerCirclepath)
-        outerbezierPath.usesEvenOddFillRule = true
-        
-        let fillLayer = CAShapeLayer()
-        fillLayer.fillRule = kCAFillRuleEvenOdd
-        fillLayer.fillColor = UIColor.green.cgColor
-        fillLayer.path = outerbezierPath.cgPath
-        maskView.layer.addSublayer(fillLayer)
-        blurEffectView.mask = maskView
-        
-        let when = DispatchTime.now() + 1
-        DispatchQueue.main.asyncAfter(deadline: when, execute: delayTask)
-//        UIView.animate(withDuration: 1.5, animations: { [unowned self] in
-//            self.blurEffectView.alpha = 1
-//        })
-    }
-    
-    func removeBlurOverLayer() {
-        blurEffectView.alpha = 0
     }
     
 }

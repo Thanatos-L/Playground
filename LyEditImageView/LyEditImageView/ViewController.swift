@@ -22,10 +22,14 @@ class ViewController: UIViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        let view = LyEditImageView(frame: self.view.frame)
+        let editView = LyEditImageView(frame: self.view.frame)
         let image = UIImage(named: "IMG_2796.JPG")!
-        view.initWithImage(image: image)
-        self.view.addSubview(view)
+        editView.initWithImage(image: image)
+        
+        let croppedImage = editView.getCroppedImage()
+        
+        
+        self.view.addSubview(editView)
         self.view.backgroundColor = UIColor.clear
     }
     
