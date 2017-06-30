@@ -7,7 +7,7 @@ An view for zoom, pan, rotate and crop image built by swift in single file.
 
 Pan Crop View | Zoom, Rotate and Crop Image
 ---|---
-![1](https://github.com/Thanatos-L/Playground/tree/master/LyEditImageView/readme/1.gif) | ![1](https://github.com/Thanatos-L/Playground/tree/master/LyEditImageView/readme/2.gif)
+![1](https://github.com/Thanatos-L/Playground/tree/master/LyEditImageView/readme/1.gif) | ![2](https://github.com/Thanatos-L/Playground/tree/master/LyEditImageView/readme/2.gif)
 
 ## Quick Start
 
