@@ -7,7 +7,7 @@ An view for zoom, pan, rotate and crop image built by swift in single file.
 
 Pan Crop View | Zoom, Rotate and Crop Image
 ---|---
-row 1 col 1 | row 1 col 2
+![1](https://github.com/Thanatos-L/Playground/tree/master/LyEditImageView/readme/1.gif) | ![1](https://github.com/Thanatos-L/Playground/tree/master/LyEditImageView/readme/2.gif)
 
 ## Quick Start
 
@@ -25,7 +25,8 @@ let croppedImage = editView.getCroppedImage()
 
 ```
 ## For Who can speak Mandarin
-```
-```
+
+[iOS - 图片的平移，缩放，旋转和裁剪](http://www.jianshu.com/p/fbe503234e35)
+
 ## License
 LyEditImageView is released under the MIT License.
